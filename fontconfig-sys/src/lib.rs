@@ -31,6 +31,60 @@ pub mod statics {
     pub static LIB: Lazy<&'static Fc> = Lazy::new(|| LIB_RESULT.as_ref().unwrap());
 }
 
+#[cfg(all(not(feature = "dlopen"), fontconfig_static))]
+macro_rules! link_static_external_library {
+    ($link: expr,
+        $(statics: $($(#[$sattr:meta])* $sname: ident: $stype: ty),+,)|*
+        $(functions: $($(#[$fattr:meta])* fn $fname: ident($($farg: ty),*) -> $fret:ty),+,)|*
+        $(varargs: $($(#[$vattr:meta])* fn $vname: ident($($vargs: ty),+) -> $vret: ty),+,)|*
+    ) => (
+        #[link(name = $link, kind = "static")]
+        extern "C" {
+            $($(
+                $(#[$sattr])*
+                pub static $sname: $stype;
+            )+)*
+            $($(
+                $(#[$fattr])*
+                pub fn $fname($(_: $farg),*) -> $fret;
+            )+)*
+            $($(
+                $(#[$vattr])*
+                pub fn $vname($(_: $vargs),+ , ...) -> $vret;
+            )+)*
+        }
+    );
+}
+
+macro_rules! fontconfig_external_library {
+    ($structname: ident, $link: expr,
+        $(statics: $($(#[$sattr:meta])* $sname: ident: $stype: ty),+,)|*
+        $(functions: $($(#[$fattr:meta])* fn $fname: ident($($farg: ty),*) -> $fret:ty),+,)|*
+        $(varargs: $($(#[$vattr:meta])* fn $vname: ident($($vargs: ty),+) -> $vret: ty),+,)|*
+    ) => (
+        #[cfg(feature = "dlopen")]
+        dlib::dlopen_external_library!(
+            $structname, $(statics: $($(#[$sattr])* $sname: $stype),+,)|*
+            $(functions: $($(#[$fattr])* fn $fname($($farg),*) -> $fret),+,)|*
+            $(varargs: $($(#[$vattr])* fn $vname($($vargs),+) -> $vret),+,)|*
+        );
+
+        #[cfg(all(not(feature = "dlopen"), fontconfig_static))]
+        link_static_external_library!(
+            $link, $(statics: $($(#[$sattr])* $sname: $stype),+,)|*
+            $(functions: $($(#[$fattr])* fn $fname($($farg),*) -> $fret),+,)|*
+            $(varargs: $($(#[$vattr])* fn $vname($($vargs),+) -> $vret),+,)|*
+        );
+
+        #[cfg(all(not(feature = "dlopen"), not(fontconfig_static)))]
+        dlib::link_external_library!(
+            $link, $(statics: $($(#[$sattr])* $sname: $stype),+,)|*
+            $(functions: $($(#[$fattr])* fn $fname($($farg),*) -> $fret),+,)|*
+            $(varargs: $($(#[$vattr])* fn $vname($($vargs),+) -> $vret),+,)|*
+        );
+    );
+}
+
 pub type FcChar8 = c_uchar;
 pub type FcChar16 = c_ushort;
 pub type FcChar32 = c_uint;
@@ -307,7 +361,7 @@ pub type FcCache = struct__FcCache;
 
 pub type union_unnamed1 = c_void;
 
-dlib::external_library!(Fc, "fontconfig",
+fontconfig_external_library!(Fc, "fontconfig",
     functions:
         fn FcBlanksCreate() -> *mut FcBlanks,
 
