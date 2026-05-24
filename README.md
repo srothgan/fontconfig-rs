@@ -19,6 +19,14 @@ UNIX-like systems such as Linux and FreeBSD. Requires Fontconfig to be installed
 set the environment variable `RUST_FONTCONFIG_DLOPEN=on` or enable the `dlopen` Cargo feature to
 load the library at runtime rather than link at build time (useful for cross compiling).
 
+> Project note: this is a project-specific fork of `fontconfig-rs` maintained
+> for [`srothgan/latex-editor`](https://github.com/srothgan/latex-editor),
+> specifically so `yeslogic-fontconfig-sys` can act as the shared Fontconfig
+> owner for both GPUI/font-kit and the embedded Tectonic engine. The fork adds
+> vcpkg discovery and static MSVC linkage support for Windows builds while
+> preserving `yeslogic-fontconfig-sys` as the single Cargo
+> `links = "fontconfig"` package in the final app graph.
+
 See the [Fontconfig developer reference][1] for more information.
 
 [1]: http://www.freedesktop.org/software/fontconfig/fontconfig-devel/t1.html
